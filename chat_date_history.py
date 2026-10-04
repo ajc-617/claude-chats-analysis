@@ -3,6 +3,7 @@ import anthropic
 from pymongo import MongoClient
 import sys
 from datetime import datetime
+import pandas as pd
 
 class ClaudeChatClass:
     #chat_path is path to Claude JSON
@@ -10,6 +11,7 @@ class ClaudeChatClass:
         self.claude_chat_json = json.load(open(chat_path))
         self.date_to_chat = self._get_frequencies(True)
         self.chat_to_date = self._get_frequencies(False)
+        self.chats_df = self._chats_to_df()
         
     # Returns nested dictionary of message lists grouped by two keys.
     # group_by_date=True -> {date: {chat_name: [messages]}}
@@ -33,6 +35,20 @@ class ClaudeChatClass:
                 #TODO should this be cur_message or cur_message["text"]?
                 result[outer_key][inner_key].append(cur_message)
         return result
+
+    def _chats_to_df(self):
+        df_rows = []
+        for chat in self.claude_chat_json:
+            chat_name = chat.get("name", "")
+            for message in chat["chat_messages"]:
+                df_rows.append({
+                    "chat_name": chat_name,
+                    "message": message.get("text", ""),
+                    "sender": message.get("sender", ""),
+                    "timestamp": message.get("created_at", ""),
+                })
+        return pd.DataFrame(df_rows)
+
     
     def summarize_chats_on_date(self, date="2025-09-01"):
         if date not in self.date_to_chat:
